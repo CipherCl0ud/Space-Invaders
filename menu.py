@@ -1,8 +1,8 @@
 import customtkinter as ctk
 import subprocess
 import sys
+import os
 import random
-import math
 
 # --- CONFIGURATION ---
 WIDTH, HEIGHT = 1000, 700
@@ -37,7 +37,7 @@ class SpaceInvadersMenu:
         self.canvas.bind("<Motion>", self.on_hover)
         self.canvas.bind("<Button-1>", self.on_click)
         
-        # Start Animation
+        # Start Animation with safety delay
         self.root.after(100, self.animate)
 
         # Handle window closing cleanly
@@ -56,10 +56,9 @@ class SpaceInvadersMenu:
 
     def draw_retro_logo(self, x, y, text):
         font_family = "Arial Black"
-        # UPDATED: Reduced size from 80 to 64 to fit screen
         size = 64  
         
-        # Shadow Layers
+        # Shadow Layers (Retro 3D effect)
         for i in range(8, 0, -1):
             color = "#4a0072" if i > 4 else "#9400d3"
             self.canvas.create_text(x + i, y + i, text=text, fill=color, font=(font_family, size, "bold"))
@@ -67,7 +66,7 @@ class SpaceInvadersMenu:
         # Top Layer
         self.canvas.create_text(x, y, text=text, fill=NEON_PINK, font=(font_family, size, "bold"))
         
-        # Scanlines (Adjusted width to match new text size)
+        # Scanlines
         for i in range(y - 40, y + 40, 4):
             self.canvas.create_line(x - 280, i, x + 280, i, fill="black", stipple="gray25", width=1)
 
@@ -79,7 +78,7 @@ class SpaceInvadersMenu:
         box_x, box_y = WIDTH//2, 450
         w, h = 400, 100
         
-        # Glow
+        # Glow Effect
         for i in range(5):
             self.canvas.create_rectangle(
                 box_x - w//2 - i, box_y - h//2 - i, 
@@ -95,7 +94,7 @@ class SpaceInvadersMenu:
             tags="play_btn"
         )
         
-        # Text
+        # Pulsing Text
         self.start_text_id = self.canvas.create_text(
             box_x, box_y, text="CLICK TO START", fill="white", font=("Courier", 30, "bold")
         )
@@ -108,7 +107,6 @@ class SpaceInvadersMenu:
         # 1. Move Stars
         for star in self.stars:
             self.canvas.move(star['id'], 0, star['speed'])
-            
             coords = self.canvas.coords(star['id'])
             if coords: 
                 if coords[1] > HEIGHT:
@@ -129,6 +127,7 @@ class SpaceInvadersMenu:
 
     def on_hover(self, event):
         x, y = event.x, event.y
+        # Button bounds check
         if 300 < x < 700 and 400 < y < 500:
             self.canvas.itemconfig(self.play_btn_id, outline="white", fill="#2a0040")
             self.canvas.config(cursor="hand2")
@@ -144,10 +143,27 @@ class SpaceInvadersMenu:
     def start_game(self):
         self.running = False
         self.root.destroy()
+        
         try:
-            subprocess.Popen([sys.executable, "game.py"])
+            # --- EXE DETECTION LOGIC ---
+            # Check if running as a PyInstaller executable
+            if getattr(sys, 'frozen', False):
+                # We are inside an EXE
+                application_path = os.path.dirname(sys.executable)
+                # Look for game.exe in the same folder
+                game_path = os.path.join(application_path, "game.exe")
+                
+                # In --onedir mode, game.exe might be a separate executable or part of the bundle
+                # If you compiled them together, it usually works best to call the internal script or the separate exe
+                # For simplicity in this specific project setup:
+                subprocess.Popen([game_path])
+            else:
+                # We are running as a normal Python script
+                subprocess.Popen([sys.executable, "game.py"])
+                
         except Exception as e:
-            print(e)
+            # Fallback error viewer if game fails to launch
+            print(f"Error launching game: {e}")
 
     def quit_game(self):
         self.running = False
